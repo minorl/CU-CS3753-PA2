@@ -67,7 +67,6 @@ craigslist.org,208.82.238.129
 weather.com,96.8.84.132
 soku.com,211.151.146.16
 alibaba.com,205.204.112.1
-megaupload.com,107.21.243.42
 renren.com,220.181.181.222
 livedoor.jp,125.6.172.15
 blogger.com,173.194.64.191
