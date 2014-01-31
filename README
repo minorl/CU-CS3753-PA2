@@ -24,7 +24,7 @@ handout - Assignment description and documentation
 ---Executables---
 lookup - A basic non-threaded DNS query-er
 queueTest - Unit test program for queue
-pthread-hello ; A simple threaded "Hello World" program
+pthread-hello - A simple threaded "Hello World" program
 
 ---Examples---
 Build:
