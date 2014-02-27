@@ -1,6 +1,6 @@
 /*
  * File: multi-lookup.c
- * Author: Leslie Minor
+ * Author: Leslie Minor <minorl@colorado.edu>
  * Project: CSCI 3753 Programming Assignment 2
  * Create Date: 2014/02/25
  * Modify Date: 2012/02/25
@@ -14,41 +14,45 @@
 #include <errno.h>
 
 #include "util.h"
+#include "multi-lookup.h"
 
-#define MINARGS 3
-#define USAGE "<inputFilePath> <outputFilePath>"
-#define SBUFSIZE 1025
-#define INPUTFS "%1024s"
- //limits from writeup
-#define MAX_INPUT_FILES 10
-#define MAX_RESOLVER_THREADS 10
-#define MIN_RESOLVER_THREADS 2
-#define MAX_NAME_LENGTH 1025
-#define MAX_IP_LENGTH INET6_ADDRSTRLEN
 
 int main(int argc, char* argv[]){
 
-/*	create struct with mutex for queue and mutex and fd of file to write to
-	for thread function
+/*	
+	global:
+		mutex queue
+		mutex write file
+		mutex counter
+		counter
+		write file
+
+	thread pools:
+		request threads
+		resolver threads
 
 	two thread functions 
-		one for putting names in queue & checking resolution [requesters]
+		one for putting names in queue [requesters]
 		one for resolving names and putting in results.txt
 	
 	#requester threads = #name files
 	
-	requester thread reads name from file, attempts to write to queue.
+	requester thread reads name from file, attempts to add to queue.
 	if full sleep
 
 	resolver threads
 	pop and query, write to results.txt
+	if empty & counter !0, sleep
 	hostname,ipaddr
 
 	------
 
-	open files
-	create struct
-	create thread pools
+	open write file
+	set counter 
+	create threads
+	
+	decrement counter as requesters & join
+	join resolvers
 	
 */
 
