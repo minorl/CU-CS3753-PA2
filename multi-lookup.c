@@ -13,6 +13,8 @@
 #include <string.h>
 #include <errno.h>
 #include <pthread.h>
+#include <unistd.h> //for sleep
+
 
 #include "queue.h"
 #include "util.h"
@@ -45,6 +47,7 @@ int main(int argc, char* argv[]){
 	return EXIT_FAILURE;
     }
 
+
     // Local Vars (after check args so no negative arrays)
     int numReqesters = argc-2;
     pthread_t requesterThreads[numReqesters];
@@ -55,7 +58,6 @@ int main(int argc, char* argv[]){
 	int i; // y u no forloop initial declarations c?!
 	char errorstr[SBUFSIZE];
 	int rc; //return code, thread creation
-
 
     /* Open Output File */
     outputfp = fopen(argv[(argc-1)], "w");
@@ -70,41 +72,25 @@ int main(int argc, char* argv[]){
 		"error: queue_init failed!\n");
     }
 
-
+    printf("spawning requester \n");
     /* Spawn Requester Threads */
-    for(i=0; i< numReqesters-1; i++){
-    	inputfp = fopen(argv[i+1], "r");
-		if(!inputfp){
-	    	sprintf(errorstr, "Error Opening Input File: %s", argv[i]);
-	    	perror(errorstr);
-	    	break;
-	    }
-    	rc = pthread_create(&(requesterThreads[i]), NULL, RequestIP, (void*)&inputfp);
+    for(i=0; i< numReqesters; i++){
+    	rc = pthread_create(&(requesterThreads[i]), NULL, RequestIP, &argv[i+1]);
 		if (rc){
 	    	printf("ERROR; return code from pthread_create() is %d\n", rc);
 	    	exit(EXIT_FAILURE);	
     	}
     }
-
+    printf("spawning resolvers \n");
     /* Spawn Resolver Threads */
-    for(i=0; i<RESOLVER_THREADS -1; i++){
+    for(i=0; i<RESOLVER_THREADS; i++){
     	rc = pthread_create(&(resolverThreads[i]), NULL, ResolveName, (void*)&outputfp);
     	if (rc){
     		printf("ERROR; return code from pthread_create() is %d\n", rc);
     		exit(EXIT_FAILURE);
     	}
     }
-	
-	// /* Open Input File */
-	// inputfp = fopen(argv[i], "r");
-	// if(!inputfp){
-	//     sprintf(errorstr, "Error Opening Input File: %s", argv[i]);
-	//     perror(errorstr);
-	//     break;
-	// }	
 
-	// /* Read File and Process*/
-	// while(fscanf(inputfp, INPUTFS, hostname) > 0){
 	
 	//     /* Lookup hostname and get IP string */
 	//     if(dnslookup(hostname, firstipstr, sizeof(firstipstr))
@@ -120,6 +106,13 @@ int main(int argc, char* argv[]){
 	// /* Close Input File */
 	// fclose(inputfp);
  //    }
+    for(i=0; i< numReqesters; i++){
+    	pthread_join(requesterThreads[i], NULL);
+    }
+    for(i=0; i< RESOLVER_THREADS; i++){
+    	pthread_join(resolverThreads[i], NULL);
+
+    }
 
     /* Close Output File */
     fclose(outputfp);
@@ -129,20 +122,69 @@ int main(int argc, char* argv[]){
 }
 
 void* RequestIP(void* fd){
-	FILE* inputfp = fd;
+	FILE* inputfp;
+	char** fname = fd;
 	char hostname[SBUFSIZE];
+	char* hostname_ptr = NULL;
+	int queueIsFull = 0;
+
+	//Open file
+    inputfp = fopen(*fname, "r");
+	if(!inputfp){
+    	fprintf(stderr, "Error Opening Input File: %s", *fname);
+    }
+    printf("Opened: %s\n", *fname);
 
 	while(fscanf(inputfp, INPUTFS, hostname) > 0){
+		//if queue was full last time we tried, sleep a little
+		if(queueIsFull) 
+			usleep(rand()%100);
 		//push hostname on queue
+		pthread_mutex_lock(&queueMutex);
+		//check if queue is full, trust no one
+		if (!(queueIsFull=queue_is_full(&q))) {
+			hostname_ptr = malloc(sizeof(hostname));
+			strcpy(hostname_ptr, hostname);
+			if(queue_push(&q, hostname_ptr) == QUEUE_FAILURE){
+				fprintf(stderr, "queue push fail \n");
+			}
+			hostname_ptr = NULL;
+		}
+		pthread_mutex_unlock(&queueMutex);
 	}
+	printf("closed file %s \n", *fname);
 	fclose(inputfp);
-		//decrement counter
+
+	//decrement counter
+	pthread_mutex_lock(&counterMutex);
+	openRequesters--;
+	pthread_mutex_unlock(&counterMutex);
+	printf("openrequesters: %d", openRequesters);
+
 	return NULL;
 }
 
 void* ResolveName(void* fd){
 	FILE* outputfp = fd;
+	int queueIsEmpty = 1;
 
+	// while requesters are open and queue not empty
+	// while(openRequesters && !queue_is_empty(&q)){
+	while(openRequesters && queueIsEmpty){
+		//pop hostname
+		pthread_mutex_lock(&queueMutex);
+		//if the queue is not empty, popit
+		if(!(queueIsEmpty = queue_is_empty(&q))){
+			queue_pop(&q);
+		}
+		pthread_mutex_unlock(&queueMutex);		
+		//resolve name
+		//write to file
+		pthread_mutex_lock(&writeMutex);
+
+		pthread_mutex_unlock(&writeMutex);
+	}
+	printf("Job's done\n");
 
 	return NULL;
 }
@@ -182,4 +224,9 @@ void* ResolveName(void* fd){
 	decrement counter as requesters & join
 	join resolvers
 	
+*/
+
+/* Questions
+-Do requesters need to check if name has been resolved? (probably not)
+
 */
