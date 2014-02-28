@@ -29,12 +29,21 @@
 #define UTIL_FAILURE -1
 #define UTIL_SUCCESS 0
 
+typedef struct node_s{
+	char data[INET6_ADDRSTRLEN];
+	struct node_s* link;
+
+} node;
+
 /* Fuction to return the first IP address found
  * for hostname. IP address returned as string
  * firstIPstr of size maxsize
  */
 int dnslookup(const char* hostname,
 	      char* firstIPstr,
+	      int maxSize);
+int multidnslookup(const char* hostname,
+	      node* head_ptr,
 	      int maxSize);
 
 #endif

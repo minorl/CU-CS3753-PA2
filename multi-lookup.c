@@ -15,10 +15,9 @@
 #include <pthread.h>
 #include <unistd.h> //for numCores
 
-
+#include "multi-lookup.h"
 #include "queue.h"
 #include "util.h"
-#include "multi-lookup.h"
 
 #define qSize 10
 
@@ -39,7 +38,6 @@ int main(int argc, char* argv[]){
 	fprintf(stderr, "Usage:\n %s %s\n", argv[0], USAGE);
 	return EXIT_FAILURE;
     }
-    
     // Local Vars (after check args so no negative arrays)
     int numReqesters = argc-2;
     pthread_t requesterThreads[numReqesters];
@@ -167,9 +165,14 @@ void* ResolveName(void* fd){
 	int queueIsEmpty = 1;
 	char* hostname_ptr = NULL;
 	char firstipstr[MAX_IP_LENGTH];
+	node* head_ptr;
+	node* tmp_ptr;
+
+
 
 	// while requesters are open and queue not empty
 	while(openRequesters || !queueIsEmpty){
+
 		//pop hostname
 		pthread_mutex_lock(&queueMutex);
 		//if queue was full, it's not anymore! tell all your friends
@@ -187,17 +190,29 @@ void* ResolveName(void* fd){
 		}
 		pthread_mutex_unlock(&queueMutex);	
 
-		/* Lookup hostname and get IP string */
-		if(dnslookup(hostname_ptr, firstipstr, sizeof(firstipstr))
-	       == UTIL_FAILURE){
+		head_ptr = malloc(sizeof(node));
+		head_ptr->link = NULL;
+		if(multidnslookup(hostname_ptr, head_ptr, sizeof(firstipstr)) 
+			== UTIL_FAILURE){
 			fprintf(stderr, "dnslookup error: %s\n", hostname_ptr);
 			strncpy(firstipstr, "", sizeof(firstipstr));
-	    }
+		}
 
 		pthread_mutex_lock(&writeMutex);
 		/* Write to Output File */
-	    fprintf(*outputfp, "%s,%s\n", hostname_ptr, firstipstr);
+	    // fprintf(*outputfp, "%s,%s\n", hostname_ptr, firstipstr);
+		fprintf(*outputfp, "%s", hostname_ptr);
+	    while(head_ptr->link != NULL){
+	    	fprintf(*outputfp, ",%s", head_ptr->data);
+	    	tmp_ptr = head_ptr;
+	    	head_ptr = head_ptr->link;
+			free(tmp_ptr);
+	    }
+
+	    fprintf(*outputfp, "\n");
 	    //If you love it, set it free
+
+	    free(head_ptr);
 	    free(hostname_ptr);
 		pthread_mutex_unlock(&writeMutex);
 	}
