@@ -29,7 +29,10 @@ int openRequesters = 0;
 pthread_mutex_t queueMutex;
 pthread_mutex_t writeMutex;
 pthread_mutex_t counterMutex;
+pthread_cond_t 	queueNotFullCond = PTHREAD_COND_INITIALIZER;
 queue q;
+int queueNotFull = 0;
+
 
 int main(int argc, char* argv[]){
 
@@ -68,6 +71,14 @@ int main(int argc, char* argv[]){
     if(queue_init(&q, qSize) == QUEUE_FAILURE){
 	fprintf(stderr,
 		"error: queue_init failed!\n");
+    }
+
+    //Initialize mutexes (mutices?)
+    if(pthread_mutex_init(&queueMutex, NULL) ||
+    pthread_mutex_init(&writeMutex, NULL) ||
+    pthread_mutex_init(&counterMutex, NULL)){
+    	fprintf(stderr, "mutex init failed");
+    	return EXIT_FAILURE;
     }
 
     printf("spawning requester \n");
@@ -112,10 +123,15 @@ int main(int argc, char* argv[]){
 
     }
 
+    //Clean up!
     /* Close Output File */
     fclose(outputfp);
    	printf("Queue is empty %d\n", queue_is_empty(&q));
     queue_cleanup(&q);
+    if(pthread_mutex_destroy(&queueMutex) ||
+    pthread_mutex_destroy(&counterMutex) ||
+    pthread_mutex_destroy(&writeMutex))
+    	fprintf(stderr, "Mutex destroy fail\n");
 
     return EXIT_SUCCESS;
 }
@@ -125,7 +141,6 @@ void* RequestIP(void* fd){
 	char** fname = fd;
 	char hostname[SBUFSIZE];
 	char* hostname_ptr = NULL;
-	int queueIsFull = 0;
 
 	//Open file
     inputfp = fopen(*fname, "r");
@@ -135,20 +150,28 @@ void* RequestIP(void* fd){
 
 	while(fscanf(inputfp, INPUTFS, hostname) > 0){
 		//if queue was full last time we tried, sleep a little
-		printf("read %s\n", hostname);
-		if(queueIsFull) 
-			usleep(rand()%100);
+		// printf("read %s\n", hostname);
+		// if(queueNotFull) 
+			
 		//push hostname on queue
 		pthread_mutex_lock(&queueMutex);
+
+		while(queue_is_full(&q)){
+			// printf("stuck\n");
+			pthread_cond_wait(&queueNotFullCond, &queueMutex);
+		}
 		//check if queue is full, trust no one
-		if (!(queueIsFull=queue_is_full(&q))) {
+		if (!queue_is_full(&q)) {
 			hostname_ptr = malloc(sizeof(hostname));
 			strcpy(hostname_ptr, hostname);
 			if(queue_push(&q, hostname_ptr) == QUEUE_FAILURE){
 				fprintf(stderr, "queue push fail \n");
 			}
-			printf("pushed %s\n", hostname_ptr);
+			// printf("pushed %s\n", hostname_ptr);
 			hostname_ptr = NULL;
+		}
+		else{
+			printf("done goofed, dropped a hostname \n");
 		}
 		pthread_mutex_unlock(&queueMutex);
 	}
@@ -176,15 +199,18 @@ void* ResolveName(void* fd){
 		}
 		//pop hostname
 		pthread_mutex_lock(&queueMutex);
+		//if queue was full, it's not anymore! tell all your friends
+		if(queue_is_full(&q))
+			pthread_cond_signal(&queueNotFullCond);
 		//if the queue is not empty, popit
 		if(!(queueIsEmpty = queue_is_empty(&q))){
 			if((hostname_ptr = queue_pop(&q)) == NULL){
 				fprintf(stderr, "error: queue_pop fail \n");
 			}
-			printf("POPPED: %s\n", hostname_ptr);
+			// printf("POPPED: %s\n", hostname_ptr);
 		}
 		else{
-			printf("QUEUE EMPTY\n");
+			// printf("QUEUE EMPTY\n");
 			pthread_mutex_unlock(&queueMutex);	
 			continue;
 		}
@@ -245,5 +271,5 @@ void* ResolveName(void* fd){
 
 /* Questions
 -Do requesters need to check if name has been resolved? (probably not)
-
+-Do we actually need to sleep?
 */
