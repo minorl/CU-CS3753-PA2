@@ -16,19 +16,22 @@
 
 
 #define MINARGS 3
-#define USAGE "<inputFilePath> <outputFilePath>"
-#define SBUFSIZE 1025
-#define INPUTFS "%1024s"
+#define USAGE "<inputFilePath1> <inputFilePath2> ... <inputFilePathN> <outputFilePath>"
+#define SBUFSIZE 1025 //max name length
+#define INPUTFS "%1024s" //max name length
 
  //limits from writeup
-#define MAX_INPUT_FILES 10
-#define MAX_RESOLVER_THREADS 10
 #define MIN_RESOLVER_THREADS 2
-#define MAX_NAME_LENGTH 1025
 #define MAX_IP_LENGTH INET6_ADDRSTRLEN
 
-
+//Where fd is name of a file with hostnames
+//Push hostnames on a queue to be resolved
 void* RequestIP(void* fd);
+
+//Where fd is a file pointer to a file 
+//opened to be written to.
+//Resolves hostnames from queue, writes
+//output to file
 void* ResolveName(void* fd);
 
 #endif
