@@ -54,9 +54,7 @@ int main(int argc, char* argv[]){
     openRequesters = numReqesters;
     pthread_t resolverThreads[RESOLVER_THREADS];
 	FILE* outputfp = NULL;
-	FILE* inputfp = NULL;
 	int i; // y u no forloop initial declarations c?!
-	char errorstr[SBUFSIZE];
 	int rc; //return code, thread creation
 
     /* Open Output File */
@@ -116,6 +114,7 @@ int main(int argc, char* argv[]){
 
     /* Close Output File */
     fclose(outputfp);
+   	printf("Queue is empty %d\n", queue_is_empty(&q));
     queue_cleanup(&q);
 
     return EXIT_SUCCESS;
@@ -133,10 +132,10 @@ void* RequestIP(void* fd){
 	if(!inputfp){
     	fprintf(stderr, "Error Opening Input File: %s", *fname);
     }
-    printf("Opened: %s\n", *fname);
 
 	while(fscanf(inputfp, INPUTFS, hostname) > 0){
 		//if queue was full last time we tried, sleep a little
+		printf("read %s\n", hostname);
 		if(queueIsFull) 
 			usleep(rand()%100);
 		//push hostname on queue
@@ -148,43 +147,61 @@ void* RequestIP(void* fd){
 			if(queue_push(&q, hostname_ptr) == QUEUE_FAILURE){
 				fprintf(stderr, "queue push fail \n");
 			}
+			printf("pushed %s\n", hostname_ptr);
 			hostname_ptr = NULL;
 		}
 		pthread_mutex_unlock(&queueMutex);
 	}
-	printf("closed file %s \n", *fname);
 	fclose(inputfp);
 
 	//decrement counter
 	pthread_mutex_lock(&counterMutex);
 	openRequesters--;
 	pthread_mutex_unlock(&counterMutex);
-	printf("openrequesters: %d", openRequesters);
 
 	return NULL;
 }
 
 void* ResolveName(void* fd){
-	FILE* outputfp = fd;
+	FILE** outputfp = fd;
 	int queueIsEmpty = 1;
+	char* hostname_ptr = NULL;
+	char firstipstr[INET6_ADDRSTRLEN];
 
 	// while requesters are open and queue not empty
-	// while(openRequesters && !queue_is_empty(&q)){
-	while(openRequesters && queueIsEmpty){
+	while(openRequesters || !queueIsEmpty){
+		//sleep for a sec if it was empty before
+		if(queueIsEmpty){
+			usleep(rand()%100);
+		}
 		//pop hostname
 		pthread_mutex_lock(&queueMutex);
 		//if the queue is not empty, popit
 		if(!(queueIsEmpty = queue_is_empty(&q))){
-			queue_pop(&q);
+			if((hostname_ptr = queue_pop(&q)) == NULL){
+				fprintf(stderr, "error: queue_pop fail \n");
+			}
+			printf("POPPED: %s\n", hostname_ptr);
 		}
-		pthread_mutex_unlock(&queueMutex);		
-		//resolve name
-		//write to file
-		pthread_mutex_lock(&writeMutex);
+		else{
+			printf("QUEUE EMPTY\n");
+			pthread_mutex_unlock(&queueMutex);	
+			continue;
+		}
+		pthread_mutex_unlock(&queueMutex);	
 
+		/* Lookup hostname and get IP string */
+		if(dnslookup(hostname_ptr, firstipstr, sizeof(firstipstr))
+	       == UTIL_FAILURE){
+			fprintf(stderr, "dnslookup error: %s\n", hostname_ptr);
+			strncpy(firstipstr, "", sizeof(firstipstr));
+	    }
+
+		pthread_mutex_lock(&writeMutex);
+		/* Write to Output File */
+	    fprintf(*outputfp, "%s,%s\n", hostname_ptr, firstipstr);
 		pthread_mutex_unlock(&writeMutex);
 	}
-	printf("Job's done\n");
 
 	return NULL;
 }
