@@ -200,7 +200,6 @@ void* ResolveName(void* fd){
 
 		pthread_mutex_lock(&writeMutex);
 		/* Write to Output File */
-	    // fprintf(*outputfp, "%s,%s\n", hostname_ptr, firstipstr);
 		fprintf(*outputfp, "%s", hostname_ptr);
 	    while(head_ptr->link != NULL){
 	    	fprintf(*outputfp, ",%s", head_ptr->data);
@@ -210,8 +209,8 @@ void* ResolveName(void* fd){
 	    }
 
 	    fprintf(*outputfp, "\n");
+	    
 	    //If you love it, set it free
-
 	    free(head_ptr);
 	    free(hostname_ptr);
 		pthread_mutex_unlock(&writeMutex);

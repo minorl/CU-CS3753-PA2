@@ -23,3 +23,6 @@ clean:
 	rm -f *.o
 	rm -f *~
 	rm -f results.txt
+
+tar:
+	tar -cf minorlpa2.tar multi-lookup.c multi-lookup.h queue.c queue.h util.c util.h README Makefile

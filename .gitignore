@@ -6,10 +6,11 @@
 #Build Files#
 lookup
 *.o
+multi-lookup
 
 #Output Files#
 output.txt
-
+results.txt
 #LaTeX Cruf#
 handout/*.log
 handout/*.aux
