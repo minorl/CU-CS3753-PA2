@@ -204,7 +204,7 @@ void* ResolveName(void* fd){
 	    while(head_ptr->link != NULL){
 	    	fprintf(*outputfp, ",%s", head_ptr->data);
 	    	tmp_ptr = head_ptr;
-	    	head_ptr = head_ptr->link;
+			head_ptr = head_ptr->link;
 			free(tmp_ptr);
 	    }
 

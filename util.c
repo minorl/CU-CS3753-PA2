@@ -89,9 +89,16 @@ int multidnslookup(const char* hostname, node* head_ptr, int maxSize){
     struct sockaddr_in* ipv4sock = NULL;
     struct in_addr* ipv4addr = NULL;
     char ipv4str[INET_ADDRSTRLEN];
+    char ipv6str[INET6_ADDRSTRLEN];
     char ipstr[INET6_ADDRSTRLEN];
     char lastipstr[INET6_ADDRSTRLEN];
     int addrError = 0;
+    char unhandled[INET6_ADDRSTRLEN];
+
+    strncpy(unhandled, "UNHANDELED", sizeof(unhandled));
+    unhandled[sizeof(unhandled)-1] = '\0';
+    
+
 
     lastipstr[0] = '\0';
     /* DEBUG: Print Hostname*/
@@ -126,11 +133,25 @@ int multidnslookup(const char* hostname, node* head_ptr, int maxSize){
 	}
 	else if(result->ai_addr->sa_family == AF_INET6){
 	    /* IPv6 Handling */
+// #ifdef UTIL_DEBUG
+// 	    fprintf(stdout, "IPv6 Address: Not Handled\n");
+// #endif
+	    //sockaddr in same for ipv6, and i'm lazy.
+	    ipv4sock = (struct sockaddr_in*)(result->ai_addr);
+	    ipv4addr = &(ipv4sock->sin_addr);
+	    if(!inet_ntop(result->ai_family, ipv4addr,
+			  ipv6str, sizeof(ipv6str))){
+		perror("Error Converting IP to String");
+		return UTIL_FAILURE;
+	    }
 #ifdef UTIL_DEBUG
-	    fprintf(stdout, "IPv6 Address: Not Handled\n");
+	    fprintf(stdout, "%s\n", ipv6str);
 #endif
-	    strncpy(ipstr, "UNHANDELED", sizeof(ipstr));
+	    strncpy(ipstr, ipv6str, sizeof(ipstr));
 	    ipstr[sizeof(ipstr)-1] = '\0';
+
+	    // strncpy(ipstr, "UNHANDELED", sizeof(ipstr));
+	    // ipstr[sizeof(ipstr)-1] = '\0';
 	}
 	else{
 	    /* Unhandlded Protocol Handling */
@@ -141,7 +162,7 @@ int multidnslookup(const char* hostname, node* head_ptr, int maxSize){
 	    ipstr[sizeof(ipstr)-1] = '\0';
 	}
 	/* Save Address */
-	if(strcmp(ipstr,"UNHANDLED") && strcmp(lastipstr, ipstr)){
+	if(strcmp(ipstr, unhandled) && strcmp(lastipstr, ipstr)){
 	    strncpy(head_ptr->data, ipstr, maxSize);
 	    head_ptr->data[maxSize-1] = '\0';
 		head_ptr->link = malloc(sizeof(node));
