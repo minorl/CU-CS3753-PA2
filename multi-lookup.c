@@ -100,7 +100,6 @@ int main(int argc, char* argv[]){
     }
 
     //Clean up!
-    printf("Cleaning up\n");
     fclose(outputfp);
     queue_cleanup(&q);
     if(pthread_mutex_destroy(&queueMutex) ||
@@ -156,7 +155,6 @@ void* RequestIP(void* fd){
 	pthread_mutex_lock(&counterMutex);
 	openRequesters--;
 	pthread_mutex_unlock(&counterMutex);
-	printf("Requester done, %d left\n", openRequesters);
 	return NULL;
 }
 
@@ -215,6 +213,5 @@ void* ResolveName(void* fd){
 	    free(hostname_ptr);
 		pthread_mutex_unlock(&writeMutex);
 	}
-	printf("Resolver done\n");
 	return NULL;
 }
