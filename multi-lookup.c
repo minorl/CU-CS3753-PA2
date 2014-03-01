@@ -49,7 +49,6 @@ int main(int argc, char* argv[]){
 	int numCPU = sysconf(_SC_NPROCESSORS_ONLN);
 
 	numResolverThreads = numCPU >= MIN_RESOLVER_THREADS ? numCPU : MIN_RESOLVER_THREADS;
-
     pthread_t resolverThreads[numResolverThreads];
 
     /* Open Output File */
@@ -101,6 +100,7 @@ int main(int argc, char* argv[]){
     }
 
     //Clean up!
+    printf("Cleaning up\n");
     fclose(outputfp);
     queue_cleanup(&q);
     if(pthread_mutex_destroy(&queueMutex) ||
@@ -156,7 +156,7 @@ void* RequestIP(void* fd){
 	pthread_mutex_lock(&counterMutex);
 	openRequesters--;
 	pthread_mutex_unlock(&counterMutex);
-
+	printf("Requester done, %d left\n", openRequesters);
 	return NULL;
 }
 
@@ -176,7 +176,7 @@ void* ResolveName(void* fd){
 		//pop hostname
 		pthread_mutex_lock(&queueMutex);
 		//if queue was full, it's not anymore! tell all your friends
-		if(queue_is_full(&q))
+//		if(queue_is_full(&q))
 			pthread_cond_signal(&queueNotFullCond);
 		//if the queue is not empty, popit
 		if(!(queueIsEmpty = queue_is_empty(&q))){
@@ -215,5 +215,6 @@ void* ResolveName(void* fd){
 	    free(hostname_ptr);
 		pthread_mutex_unlock(&writeMutex);
 	}
+	printf("Resolver done\n");
 	return NULL;
 }
