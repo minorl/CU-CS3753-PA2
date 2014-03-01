@@ -1,6 +1,7 @@
 /*
  * File: util.c
  * Author: Andy Sayler
+ * Modified by: Leslie Minor (multidns w/ ipv6)
  * Project: CSCI 3753 Programming Assignment 2
  * Create Date: 2012/02/01
  * Modify Date: 2012/02/01
@@ -97,7 +98,7 @@ int multidnslookup(const char* hostname, node* head_ptr, int maxSize){
 
     strncpy(unhandled, "UNHANDELED", sizeof(unhandled));
     unhandled[sizeof(unhandled)-1] = '\0';
-    
+
 
 
     lastipstr[0] = '\0';
@@ -132,11 +133,10 @@ int multidnslookup(const char* hostname, node* head_ptr, int maxSize){
 	    ipstr[sizeof(ipstr)-1] = '\0';
 	}
 	else if(result->ai_addr->sa_family == AF_INET6){
-	    /* IPv6 Handling */
-// #ifdef UTIL_DEBUG
-// 	    fprintf(stdout, "IPv6 Address: Not Handled\n");
-// #endif
-	    //sockaddr in same for ipv6, and i'm lazy.
+		// IPv6 Address Handling
+	    //sockaddr in struct same for ipv6, and i'm lazy.
+	    //this is probably why i'll never get a job
+	    // and die alone with 7 cats
 	    ipv4sock = (struct sockaddr_in*)(result->ai_addr);
 	    ipv4addr = &(ipv4sock->sin_addr);
 	    if(!inet_ntop(result->ai_family, ipv4addr,
@@ -150,8 +150,6 @@ int multidnslookup(const char* hostname, node* head_ptr, int maxSize){
 	    strncpy(ipstr, ipv6str, sizeof(ipstr));
 	    ipstr[sizeof(ipstr)-1] = '\0';
 
-	    // strncpy(ipstr, "UNHANDELED", sizeof(ipstr));
-	    // ipstr[sizeof(ipstr)-1] = '\0';
 	}
 	else{
 	    /* Unhandlded Protocol Handling */

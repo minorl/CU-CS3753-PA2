@@ -3,7 +3,7 @@
  * Author: Leslie Minor <minorl@colorado.edu>
  * Project: CSCI 3753 Programming Assignment 2
  * Create Date: 2014/02/25
- * Modify Date: 2012/02/27
+ * Modify Date: 2012/02/28
  * Description:
  *	Multi-threaded DNS resolution  
  */
@@ -217,9 +217,3 @@ void* ResolveName(void* fd){
 	}
 	return NULL;
 }
-
-
-/* Questions
--Do requesters need to check if name has been resolved? (probably not)
--Do we actually need to sleep?
-*/
