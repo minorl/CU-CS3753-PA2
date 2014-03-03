@@ -32,13 +32,14 @@ queue q;
 
 int main(int argc, char* argv[]){
 
-    /* Check Arguments */
-    if(argc < MINARGS){
-	fprintf(stderr, "Not enough arguments: %d\n", (argc - 1));
-	fprintf(stderr, "Usage:\n %s %s\n", argv[0], USAGE);
-	return EXIT_FAILURE;
-    }
-    // Local Vars (after check args so no negative arrays)
+	/* Check Arguments */
+	if(argc < MINARGS){
+		fprintf(stderr, "Not enough arguments: %d\n", (argc - 1));
+		fprintf(stderr, "Usage:\n %s %s\n", argv[0], USAGE);
+		return EXIT_FAILURE;
+	}
+	
+	// Local Vars (after check args so no negative arrays)
     int numReqesters = argc-2;
     pthread_t requesterThreads[numReqesters];
     openRequesters = numReqesters;
@@ -54,14 +55,14 @@ int main(int argc, char* argv[]){
     /* Open Output File */
     outputfp = fopen(argv[(argc-1)], "w");
     if(!outputfp){
-	fprintf(stderr, "Error Opening Output File\n");
-	return EXIT_FAILURE;
+		fprintf(stderr, "Error Opening Output File\n");
+		return EXIT_FAILURE;
     }
 
     //Initialize queue
     if(queue_init(&q, qSize) == QUEUE_FAILURE){
-	fprintf(stderr,
-		"error: queue_init failed!\n");
+		fprintf(stderr,
+			"error: queue_init failed!\n");
     }
 
     //Initialize mutexes (mutices?)
@@ -123,7 +124,6 @@ void* RequestIP(void* fd){
     	pthread_mutex_lock(&counterMutex);
 		openRequesters--;
 		pthread_mutex_unlock(&counterMutex);
-
 		return NULL;
     }
 
@@ -150,6 +150,7 @@ void* RequestIP(void* fd){
 		}
 		pthread_mutex_unlock(&queueMutex);
 	}
+
 	fclose(inputfp);
 	//decrement counter
 	pthread_mutex_lock(&counterMutex);
@@ -166,16 +167,12 @@ void* ResolveName(void* fd){
 	node* head_ptr;
 	node* tmp_ptr;
 
-
-
 	// while requesters are open and queue not empty
 	while(openRequesters || !queueIsEmpty){
-
 		//pop hostname
 		pthread_mutex_lock(&queueMutex);
 		//if queue was full, it's not anymore! tell all your friends
-//		if(queue_is_full(&q))
-			pthread_cond_signal(&queueNotFullCond);
+		pthread_cond_signal(&queueNotFullCond);
 		//if the queue is not empty, popit
 		if(!(queueIsEmpty = queue_is_empty(&q))){
 			if((hostname_ptr = queue_pop(&q)) == NULL){
@@ -186,6 +183,7 @@ void* ResolveName(void* fd){
 			pthread_mutex_unlock(&queueMutex);	
 			continue;
 		}
+
 		pthread_mutex_unlock(&queueMutex);	
 
 		head_ptr = malloc(sizeof(node));
@@ -197,6 +195,7 @@ void* ResolveName(void* fd){
 		}
 
 		pthread_mutex_lock(&writeMutex);
+
 		/* Write to Output File */
 		fprintf(*outputfp, "%s", hostname_ptr);
 	    while(head_ptr->link != NULL){
@@ -207,7 +206,7 @@ void* ResolveName(void* fd){
 	    }
 
 	    fprintf(*outputfp, "\n");
-	    
+
 	    //If you love it, set it free
 	    free(head_ptr);
 	    free(hostname_ptr);
