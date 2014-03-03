@@ -8,7 +8,6 @@
  * Description:
  * 	This file contains declarations of utility functions for
  *      Programming Assignment 2.
- *  
  */
 
 #include "util.h"
